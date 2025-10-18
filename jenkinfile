@@ -1,0 +1,34 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/yourusername/yourrepo.git'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('MySonar') {
+                    sh 'sonar-scanner -Dsonar.projectKey=myproject -Dsonar.sources=.'
+                }
+            }
+        }
+
+        stage('Deploy via SSH') {
+            steps {
+                sshPublisher(publishers: [sshPublisherDesc(
+                    configName: 'MyEC2Server',
+                    transfers: [sshTransfer(
+                        sourceFiles: '**/*',
+                        remoteDirectory: '/home/ubuntu/app',
+                        execCommand: 'sudo systemctl restart myapp'
+                    )],
+                    usePromotionTimestamp: false,
+                    verbose: true
+                )])
+            }
+        }
+    }
+}
